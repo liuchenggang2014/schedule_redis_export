@@ -1,0 +1,50 @@
+main:
+  steps:
+    - init:
+        assign:
+        - project_id: "cliu201"        
+        - location_id: "us-central1"
+        - instance_id: "us-redis"
+        - bucket: "cliu201-us"
+    - get_worflow_datetime:
+        call: sys.now 
+        result: Epoch_seconds
+    - time_format:
+        call: time.format
+        args:
+          seconds: ${Epoch_seconds}
+          timezone: "Asia/Shanghai"
+        result: backup_dt
+    - redis_Export:
+        call: http.post
+        args:
+          url: ${"https://redis.googleapis.com/v1/projects/" + project_id + "/locations/" + location_id + "/instances/" + instance_id + ":export"}
+          auth:
+            type: OAuth2
+          body:
+            outputConfig:
+              gcsDestination:
+                uri: ${"gs://" + bucket + "/redis/backup-" + backup_dt + ".rdb"}
+        result: operation
+    - chekoperation:
+        switch:
+          - condition: ${operation.body.done != true}
+            next: wait
+        next: completed
+    - completed:
+        return: "Done"
+    - wait:
+        call: sys.sleep
+        args:
+          seconds: 1
+        next: getoperation
+    - getoperation:
+        call: http.get
+        args:
+          url: ${"https://redis.googleapis.com/v1/" + operation.body.name}
+          auth:
+            type: OAuth2
+        result: operation
+        next: chekoperation
+
+
