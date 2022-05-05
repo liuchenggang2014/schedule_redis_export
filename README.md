@@ -1,3 +1,9 @@
+```mermaid
+flowchart TD
+A[Cloud Scheduler] --> B[Redis Export]
+B --> C[Cloud Storage]
+```
+
 
 1. deploy the workflow
 ```
